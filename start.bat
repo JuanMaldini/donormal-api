@@ -33,9 +33,8 @@ echo [donormal] Instalando dependencias (la primera vez tarda)...
 ".venv\Scripts\python.exe" -m pip install -q --disable-pip-version-check -r deploy\requirements.txt
 if errorlevel 1 ( echo [donormal] Error instalando dependencias. & pause & exit /b 1 )
 
-echo [donormal] Levantando worker nativo...
-set WORKER_ENABLED=true
-start "donormal-worker" /min "%~dp0.venv\Scripts\python.exe" scripts\worker.py
+echo [donormal] Levantando worker nativo (cmd visible)...
+start "donormal-worker" "%~dp0.venv\Scripts\python.exe" scripts\worker.py
 
 :done
 echo [donormal] Worker corriendo. Logs: logs\donormal.log

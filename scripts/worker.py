@@ -23,7 +23,7 @@ import time
 
 from config import get_config
 from logs import get_logger
-from normalmap import bump_to_normal_bytes
+from normalmap import bump_to_normal_bytes, is_image_name
 from pocketbase import PBAdmin, PBError, expected_normal_name
 
 log = get_logger()
@@ -50,6 +50,11 @@ def process_record(admin: PBAdmin, cfg, record: dict) -> int:
     created = 0
     for pair in PBAdmin.pairs(record):
         if pair.normal:
+            continue
+        if not is_image_name(pair.texture):
+            log.info(
+                "[%s] skip (no es imagen): %s", record["id"], pair.texture
+            )
             continue
         try:
             data = admin.download_file(record["id"], pair.texture)

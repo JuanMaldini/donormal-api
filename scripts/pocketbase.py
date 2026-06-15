@@ -116,14 +116,32 @@ class PBAdmin:
 
     # -- registros ---------------------------------------------------------- #
     def get_record_for_user(self, user_id: str) -> dict | None:
-        """Registro de PB_DATA cuyo `relation` == user_id (o None)."""
-        r = self._client.get(
-            f"/api/collections/{self.cfg.pb_data}/records",
-            params={"filter": f'relation = "{user_id}"', "perPage": 1},
-        )
-        r.raise_for_status()
-        items = r.json().get("items", [])
-        return items[0] if items else None
+        """Registro de PB_DATA asignado al usuario (o None).
+
+        La `relation` puede ser:
+          - string con el id del user guardado a mano, o
+          - campo relation de PocketBase (que se filtra con `relation.id`).
+        Probamos ambas variantes con fallback, igual que hace
+        Clothfigurator_web/src/utils/pocketbaseUserData.ts, para no
+        depender de cómo esté armada la colección.
+        """
+        for filt in (f'relation = "{user_id}"', f'relation.id ?= "{user_id}"'):
+            try:
+                r = self._client.get(
+                    f"/api/collections/{self.cfg.pb_data}/records",
+                    params={"filter": filt, "perPage": 1},
+                )
+            except httpx.HTTPError as exc:
+                log.debug("get_record_for_user: HTTP error con %s: %s", filt, exc)
+                continue
+            if r.status_code != 200:
+                log.debug("get_record_for_user: status %s con %s", r.status_code, filt)
+                continue
+            items = r.json().get("items", [])
+            if items:
+                log.debug("get_record_for_user: match con filtro %s", filt)
+                return items[0]
+        return None
 
     def iter_all_records(self) -> list[dict]:
         """Todos los registros de PB_DATA (para el worker fase 2)."""

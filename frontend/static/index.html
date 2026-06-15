@@ -8,27 +8,41 @@
   :root{
     --bg:#0f1115; --panel:#171a21; --panel2:#1f242e; --line:#2a313d;
     --txt:#e6e9ef; --mut:#8b94a3; --acc:#27ae60; --acch:#229954;
-    --err:#e74c3c; --warn:#e67e22; --info:#3498db;
+    --err:#e74c3c; --warn:#e67e22; --info:#3498db; --sk:#5d6470;
   }
   *{box-sizing:border-box}
   body{margin:0;font:14px/1.45 "Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--txt)}
-  header{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel)}
+  header{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
   header h1{font-size:16px;margin:0;font-weight:600}
   header .sp{flex:1}
   header .who{color:var(--mut);font-size:13px}
   header .qstat{color:var(--mut);font-size:12px;border:1px solid var(--line);border-radius:6px;padding:4px 8px}
+  header .mode{font-size:12px;border:1px solid var(--line);border-radius:6px;padding:4px 8px;display:flex;gap:4px;align-items:center}
+  header .mode button{background:transparent;border:0;color:var(--mut);padding:2px 8px;font-size:12px;cursor:pointer;border-radius:4px}
+  header .mode button.on{background:var(--panel2);color:var(--txt)}
   button{background:var(--acc);color:#fff;border:0;border-radius:6px;padding:8px 14px;font:inherit;cursor:pointer}
   button:hover{background:var(--acch)} button:disabled{opacity:.45;cursor:default}
   button.ghost{background:transparent;border:1px solid var(--line);color:var(--mut)}
+  button.ghost:hover{color:var(--txt);background:var(--panel2)}
   button.danger{background:var(--err)} button.danger:hover{background:#c0392b}
-  .wrap{max-width:1200px;margin:0 auto;padding:18px}
+  button.warn{background:var(--warn)} button.warn:hover{background:#d35400}
+  .wrap{max-width:1300px;margin:0 auto;padding:18px}
   .bar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+  .bar .sp{flex:1}
   /* login */
   .login{max-width:340px;margin:12vh auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:24px}
   .login h2{margin:0 0 16px;font-size:18px}
   .login input{width:100%;margin-bottom:10px;padding:10px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--txt)}
   .login button{width:100%} .err{color:var(--err);font-size:13px;min-height:18px;margin-top:6px}
-  /* viewers */
+  /* users (admin) */
+  .users{display:flex;flex-direction:column;gap:14px}
+  .user{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .user .uh{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--panel2);font-size:13px;flex-wrap:wrap}
+  .user .uh .name{font-weight:600}
+  .user .uh .email{color:var(--mut);font-size:12px}
+  .user .uh .sp{flex:1}
+  .user .uh .stats{font-size:11px;color:var(--mut)}
+  .user .uh .stats b{color:var(--txt);font-weight:600}
   .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
   .card h3{margin:0;padding:12px 14px;font-size:13px;font-weight:600;border-bottom:1px solid var(--line);color:var(--mut);text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:8px}
@@ -46,6 +60,7 @@
   .chip.PROCESSING{background:#2a2410;color:var(--warn);border:1px solid var(--warn)}
   .chip.HAS_NORMAL{background:#16241a;color:var(--acc);border:1px solid var(--acc)}
   .chip.ERROR{background:#2a1416;color:var(--err);border:1px solid var(--err)}
+  .chip.SKIPPED{background:#1d2027;color:var(--sk);border:1px solid var(--sk)}
   /* logs */
   .logs{margin-top:16px;background:#0a0c10;border:1px solid var(--line);border-radius:10px}
   .logs h3{margin:0;padding:10px 14px;font-size:12px;color:var(--mut);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
@@ -61,6 +76,9 @@
   .modal h4{margin:0 0 8px;font-size:16px}
   .modal p{color:var(--mut);font-size:13px;margin:0 0 16px}
   .modal .row{display:flex;gap:10px;justify-content:flex-end}
+  .filter{margin:0 14px 12px;display:flex;gap:8px;align-items:center;font-size:12px;color:var(--mut)}
+  .filter input{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:6px;padding:4px 8px;font:inherit;min-width:200px}
+  .filter label{display:flex;gap:6px;align-items:center;cursor:pointer}
 </style>
 </head>
 <body>
@@ -81,6 +99,10 @@
   <header>
     <h1>donormal</h1>
     <span class="dot" id="hdot" title="estado PocketBase"></span>
+    <div class="mode" id="modeBar" style="display:none">
+      <button data-mode="mine" class="on" id="modeMineBtn">👤 Mis texturas</button>
+      <button data-mode="all" id="modeAllBtn">🌐 Todas (admin)</button>
+    </div>
     <div class="sp"></div>
     <span class="qstat" id="qstat">cola: —</span>
     <span class="who" id="who"></span>
@@ -90,19 +112,40 @@
     <div class="bar">
       <button id="refreshBtn" class="ghost">Refrescar</button>
       <button id="autoBtn" class="danger" title="Procesa TODAS las texturas sin normal">⚠ Auto-procesar todo</button>
+      <span class="sp"></span>
+      <span id="adminNote" style="font-size:12px;color:var(--mut)"></span>
     </div>
-    <div class="cols">
-      <div class="card">
-        <h3>Mis texturas (albedo)<span class="sp"></span></h3>
-        <div class="grid" id="texGrid"><div class="empty">Cargando…</div></div>
+
+    <!-- VISTA MINE -->
+    <div id="viewMine">
+      <div class="cols">
+        <div class="card">
+          <h3>Mis texturas (albedo)<span class="sp"></span></h3>
+          <div class="grid" id="texGrid"><div class="empty">Cargando…</div></div>
+        </div>
+        <div class="card">
+          <h3>Normales convertidas<span class="sp"></span>
+            <button id="delAllBtn" class="danger" style="padding:4px 8px;font-size:11px">⚠ Borrar todas</button>
+          </h3>
+          <div class="grid" id="normGrid"><div class="empty">—</div></div>
+        </div>
       </div>
+    </div>
+
+    <!-- VISTA ALL (admin) -->
+    <div id="viewAll" style="display:none">
       <div class="card">
-        <h3>Normales convertidas<span class="sp"></span>
-          <button id="delAllBtn" class="danger" style="padding:4px 8px;font-size:11px">⚠ Borrar todas</button>
+        <h3>Todos los usuarios (admin)<span class="sp"></span>
+          <span style="font-size:11px;color:var(--mut)">clic en un item = ver / generar</span>
         </h3>
-        <div class="grid" id="normGrid"><div class="empty">—</div></div>
+        <div class="filter">
+          <label><input type="checkbox" id="hideSkippedCb" /> ocultar no-imagen</label>
+          <input type="text" id="userFilter" placeholder="filtrar por email o textura..." />
+        </div>
+        <div class="users" id="usersBox"><div class="empty">Cargando…</div></div>
       </div>
     </div>
+
     <div class="logs">
       <h3><span class="dot" id="ldot"></span> Logs</h3>
       <pre id="logBox">—</pre>
@@ -122,16 +165,39 @@
   </div>
 </div>
 
+<!-- MODAL admin login -->
+<div class="modal" id="adminModal">
+  <div class="box">
+    <h4>Modo administrador</h4>
+    <p>Ingresá el ADMIN_TOKEN (definido en el .env del servidor) para ver y procesar texturas de todos los usuarios.</p>
+    <input id="adminTokenInput" type="password" placeholder="admin token" style="width:100%;margin-bottom:10px;padding:10px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--txt)" />
+    <div class="err" id="adminErr"></div>
+    <div class="row">
+      <button class="ghost" id="adminCancel">Cancelar</button>
+      <button id="adminOk">Entrar</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
 const $ = s => document.querySelector(s);
-let TOKEN=null, USER=null, POLL=null;
+let TOKEN=null, USER=null, ADMIN_TOKEN=null;
+let MODE="mine"; // "mine" | "all"
+let ADMIN_ENABLED=false;
+let LAST_ADMIN_OVERVIEW=null;
+let POLL=null;
+let HIDE_SKIPPED=true;
+let USER_FILTER="";
 
-function authHeaders(){ return { "Authorization":"Bearer "+TOKEN }; }
+const MINE_HEADERS = () => ({ "Authorization": "Bearer " + (TOKEN||"") });
+const ADMIN_HEADERS = () => ({ "X-Admin-Token": ADMIN_TOKEN||"" });
+
 function toast(m){ const t=$("#toast"); t.textContent=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2600); }
-function confirmDanger(title,text){ return new Promise(res=>{
-  $("#mTitle").textContent=title; $("#mText").textContent=text; $("#modal").classList.add("show");
+function confirmDanger(title,text, dangerLabel="Confirmar"){ return new Promise(res=>{
+  $("#mTitle").textContent=title; $("#mText").textContent=text; $("#mOk").textContent=dangerLabel;
+  $("#modal").classList.add("show");
   const ok=$("#mOk"),cancel=$("#mCancel");
   const done=v=>{ $("#modal").classList.remove("show"); ok.onclick=null; cancel.onclick=null; res(v); };
   ok.onclick=()=>done(true); cancel.onclick=()=>done(false);
@@ -154,12 +220,57 @@ async function login(){
 function logout(){ sessionStorage.clear(); TOKEN=null; USER=null; if(POLL)clearInterval(POLL);
   $("#appView").style.display="none"; $("#loginView").style.display="block"; }
 
+async function checkAdminStatus(){
+  try{
+    const r=await fetch("/api/admin/status");
+    if(!r.ok) return;
+    const d=await r.json();
+    ADMIN_ENABLED=!!d.enabled;
+    if(ADMIN_ENABLED){ $("#modeBar").style.display=""; }
+  }catch{}
+}
+
+function openAdminLogin(){
+  if(!ADMIN_ENABLED){ toast("Modo admin no configurado (falta ADMIN_TOKEN en .env)"); return; }
+  $("#adminErr").textContent="";
+  $("#adminTokenInput").value="";
+  $("#adminModal").classList.add("show");
+  $("#adminTokenInput").focus();
+}
+function closeAdminLogin(){ $("#adminModal").classList.remove("show"); }
+async function doAdminLogin(){
+  const t=$("#adminTokenInput").value.trim();
+  if(!t){ $("#adminErr").textContent="Poné el token"; return; }
+  try{
+    const r=await fetch("/api/admin/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:t})});
+    if(!r.ok){ const e=await r.json().catch(()=>({})); throw new Error(e.detail||"Token inválido"); }
+    ADMIN_TOKEN=t; sessionStorage.setItem("dn_admin",t);
+    closeAdminLogin();
+    setMode("all");
+    toast("Modo admin activado");
+  }catch(err){ $("#adminErr").textContent=err.message; }
+}
+
+function setMode(m){
+  if(m==="all" && !ADMIN_TOKEN){ openAdminLogin(); return; }
+  MODE=m;
+  $("#modeMineBtn").classList.toggle("on", m==="mine");
+  $("#modeAllBtn").classList.toggle("on", m==="all");
+  $("#viewMine").style.display = m==="mine" ? "" : "none";
+  $("#viewAll").style.display  = m==="all"  ? "" : "none";
+  $("#autoBtn").style.display  = m==="mine" ? "" : "none";
+  $("#adminNote").textContent  = m==="all"  ? "🌐 Modo admin — podés encolar para cualquier registro" : "";
+  if(m==="mine") loadMine();
+  if(m==="all")  loadAll();
+}
+
 function enterApp(){
   $("#loginView").style.display="none"; $("#appView").style.display="block";
   $("#who").textContent=USER.email||USER.name||USER.id;
-  loadTextures(); refreshLogs(); checkHealth();
+  setMode("mine");
+  refreshLogs(); checkHealth(); checkAdminStatus();
   if(POLL)clearInterval(POLL);
-  POLL=setInterval(()=>{ if(TOKEN){ refreshLogs(); pollQueue(); } },4000);
+  POLL=setInterval(()=>{ if(TOKEN){ refreshLogs(); pollQueue(); if(MODE==="mine") loadMine(); if(MODE==="all") loadAll(); } },4000);
 }
 
 async function checkHealth(){
@@ -170,38 +281,37 @@ async function checkHealth(){
 let lastQueueBusy=false;
 async function pollQueue(){
   try{
-    const r=await fetch("/api/queue",{headers:authHeaders()});
+    const r=await fetch("/api/queue",{headers:MINE_HEADERS()});
     if(r.status===401){ logout(); return; }
     const q=await r.json();
     const busy=(q.pending||0)+(q.PROCESSING||0)+(q.QUEUED||0);
     $("#qstat").textContent=`cola: ${q.QUEUED||0} en espera · ${q.PROCESSING||0} procesando · ${q.ERROR||0} error`;
-    // si había cola y se vació, refrescamos los visores
-    if(lastQueueBusy && busy===0) loadTextures();
+    if(lastQueueBusy && busy===0){ if(MODE==="mine") loadMine(); if(MODE==="all") loadAll(); }
     lastQueueBusy = busy>0;
   }catch{}
 }
 
-async function loadTextures(){
+// ── VISTA MINE ───────────────────────────────────────────────────────────────
+async function loadMine(){
   try{
-    const r=await fetch("/api/textures",{headers:authHeaders()});
+    const r=await fetch("/api/textures",{headers:MINE_HEADERS()});
     if(r.status===401){ logout(); return; }
-    const d=await r.json(); renderTextures(d.items||[]);
+    const d=await r.json(); renderMine(d.items||[]);
   }catch{ $("#texGrid").innerHTML='<div class="empty">Error al cargar</div>'; }
 }
 
-function imgTile(filename){
+function imgTileMine(filename){
   const img=document.createElement("img"); img.loading="lazy";
-  fetch("/api/file/"+encodeURIComponent(filename),{headers:authHeaders()})
+  fetch("/api/file/"+encodeURIComponent(filename),{headers:MINE_HEADERS()})
     .then(res=>res.ok?res.blob():Promise.reject()).then(b=>img.src=URL.createObjectURL(b)).catch(()=>{});
   return img;
 }
-
 function texTile(it){
   const div=document.createElement("div"); div.className="tile";
-  div.appendChild(imgTile(it.texture));
+  div.appendChild(imgTileMine(it.texture));
   const meta=document.createElement("div"); meta.className="meta";
   const chip=document.createElement("span"); chip.className="chip "+it.state;
-  chip.textContent={READY:"sin normal",QUEUED:"en cola",PROCESSING:"procesando…",HAS_NORMAL:"✓ con normal",ERROR:"error"}[it.state]||it.state;
+  chip.textContent={READY:"sin normal",QUEUED:"en cola",PROCESSING:"procesando…",HAS_NORMAL:"✓ con normal",ERROR:"error",SKIPPED:"no imagen"}[it.state]||it.state;
   meta.appendChild(chip);
   const nm=document.createElement("div"); nm.className="name"; nm.textContent=it.texture; meta.appendChild(nm);
   if(it.state==="READY"||it.state==="ERROR"){
@@ -211,10 +321,9 @@ function texTile(it){
   if(it.state==="ERROR" && it.error){ const e=document.createElement("div"); e.className="name"; e.style.color="var(--err)"; e.textContent=it.error; meta.appendChild(e); }
   div.appendChild(meta); return div;
 }
-
 function normTile(it){
   const div=document.createElement("div"); div.className="tile";
-  div.appendChild(imgTile(it.normal));
+  div.appendChild(imgTileMine(it.normal));
   const meta=document.createElement("div"); meta.className="meta";
   const nm=document.createElement("div"); nm.className="name"; nm.textContent=it.normal; meta.appendChild(nm);
   const sub=document.createElement("div"); sub.className="name"; sub.style.opacity=".7"; sub.textContent="de "+it.texture; meta.appendChild(sub);
@@ -222,8 +331,7 @@ function normTile(it){
   b.onclick=()=>delNormal(it.normal,b); meta.appendChild(b);
   div.appendChild(meta); return div;
 }
-
-function renderTextures(items){
+function renderMine(items){
   const tg=$("#texGrid"), ng=$("#normGrid"); tg.innerHTML=""; ng.innerHTML="";
   if(!items.length){ tg.innerHTML='<div class="empty">No tenés texturas subidas</div>'; ng.innerHTML='<div class="empty">—</div>'; return; }
   let norms=0, processable=0;
@@ -236,64 +344,166 @@ function renderTextures(items){
   $("#autoBtn").disabled = processable===0;
   $("#delAllBtn").disabled = norms===0;
 }
-
 async function enqueue(filename,btn){
   if(btn){ btn.disabled=true; btn.textContent="Encolando…"; }
   try{
-    const r=await fetch("/api/enqueue",{method:"POST",headers:{...authHeaders(),"Content-Type":"application/json"},body:JSON.stringify({filename})});
+    const r=await fetch("/api/enqueue",{method:"POST",headers:{...MINE_HEADERS(),"Content-Type":"application/json"},body:JSON.stringify({filename})});
     const d=await r.json().catch(()=>({}));
     if(!r.ok) throw new Error(d.detail||"Error");
-    toast("Encolada: "+filename); loadTextures(); pollQueue();
-  }catch(err){ toast("✗ "+err.message); loadTextures(); }
+    toast("Encolada: "+filename); loadMine(); pollQueue();
+  }catch(err){ toast("✗ "+err.message); loadMine(); }
 }
-
 async function autoProcess(){
   if(!await confirmDanger("⚠ Auto-procesar todo","Esto encola TODAS tus texturas que no tienen normal. Puede generar muchos archivos en PocketBase. ¿Continuar?")) return;
   try{
-    const r=await fetch("/api/auto-process",{method:"POST",headers:authHeaders()});
+    const r=await fetch("/api/auto-process",{method:"POST",headers:MINE_HEADERS()});
     const d=await r.json().catch(()=>({}));
     if(!r.ok) throw new Error(d.detail||"Error");
-    toast(`Encoladas ${d.queued} texturas`); loadTextures(); pollQueue();
+    toast(`Encoladas ${d.queued} texturas`); loadMine(); pollQueue();
   }catch(err){ toast("✗ "+err.message); }
 }
-
 async function delNormal(filename,btn){
   if(!await confirmDanger("Borrar normal","Se borrará "+filename+" de PocketBase. ¿Continuar?")) return;
   if(btn){ btn.disabled=true; btn.textContent="Borrando…"; }
   try{
-    const r=await fetch("/api/normals/delete",{method:"POST",headers:{...authHeaders(),"Content-Type":"application/json"},body:JSON.stringify({filename})});
+    const r=await fetch("/api/normals/delete",{method:"POST",headers:{...MINE_HEADERS(),"Content-Type":"application/json"},body:JSON.stringify({filename})});
     const d=await r.json().catch(()=>({}));
     if(!r.ok) throw new Error(d.detail||"Error");
-    toast("Normal borrada"); loadTextures();
-  }catch(err){ toast("✗ "+err.message); loadTextures(); }
+    toast("Normal borrada"); loadMine();
+  }catch(err){ toast("✗ "+err.message); loadMine(); }
 }
-
 async function delAll(){
   if(!await confirmDanger("⚠ Borrar TODAS las normales","Se borrarán todas tus normales de PocketBase. Esto no se puede deshacer. ¿Continuar?")) return;
   try{
-    const r=await fetch("/api/normals/delete-all",{method:"POST",headers:authHeaders()});
+    const r=await fetch("/api/normals/delete-all",{method:"POST",headers:MINE_HEADERS()});
     const d=await r.json().catch(()=>({}));
     if(!r.ok) throw new Error(d.detail||"Error");
-    toast(`Borradas ${d.deleted} normales`); loadTextures();
+    toast(`Borradas ${d.deleted} normales`); loadMine();
   }catch(err){ toast("✗ "+err.message); }
 }
 
+// ── VISTA ALL (admin) ────────────────────────────────────────────────────────
+async function loadAll(){
+  if(!ADMIN_TOKEN) return;
+  try{
+    const r=await fetch("/api/admin/overview",{headers:ADMIN_HEADERS()});
+    if(r.status===401){ toast("✗ token admin expirado"); ADMIN_TOKEN=null; sessionStorage.removeItem("dn_admin"); setMode("mine"); return; }
+    if(!r.ok){ $("#usersBox").innerHTML='<div class="empty">Error al cargar (admin)</div>'; return; }
+    LAST_ADMIN_OVERVIEW=await r.json();
+    renderAll(LAST_ADMIN_OVERVIEW.users||[]);
+  }catch{ $("#usersBox").innerHTML='<div class="empty">Error al cargar</div>'; }
+}
+function imgTileAdmin(recordId, filename){
+  const img=document.createElement("img"); img.loading="lazy";
+  fetch(`/api/admin/file/${encodeURIComponent(recordId)}/${encodeURIComponent(filename)}`,{headers:ADMIN_HEADERS()})
+    .then(res=>res.ok?res.blob():Promise.reject()).then(b=>img.src=URL.createObjectURL(b)).catch(()=>{
+      img.style.background="#222"; img.alt="(no imagen)";
+    });
+  return img;
+}
+function userBlock(u){
+  const box=document.createElement("div"); box.className="user";
+  const uh=document.createElement("div"); uh.className="uh";
+  const nm=document.createElement("div"); nm.className="name"; nm.textContent = u.user.name || u.user.email || "(sin nombre)";
+  uh.appendChild(nm);
+  if(u.user.email && u.user.name){ const em=document.createElement("div"); em.className="email"; em.textContent=u.user.email; uh.appendChild(em); }
+  const sp=document.createElement("div"); sp.className="sp"; uh.appendChild(sp);
+  const items=u.items||[];
+  const total=items.length, ready=items.filter(x=>x.state==="READY").length, processing=items.filter(x=>x.state==="PROCESSING"||x.state==="QUEUED").length, errors=items.filter(x=>x.state==="ERROR").length, hasN=items.filter(x=>x.has_normal).length, skipped=items.filter(x=>!x.is_image).length;
+  const stats=document.createElement("div"); stats.className="stats";
+  stats.innerHTML = `total <b>${total}</b> · sin normal <b>${ready}</b> · con normal <b>${hasN}</b> · cola <b>${processing}</b> · error <b>${errors}</b> · no-imagen <b>${skipped}</b>`;
+  uh.appendChild(stats);
+  const ab=document.createElement("button"); ab.className="warn"; ab.style.padding="4px 10px"; ab.style.fontSize="11px";
+  ab.textContent="⚠ Auto-procesar este registro"; ab.onclick=()=>adminAutoProcess(u.record_id);
+  uh.appendChild(ab);
+  box.appendChild(uh);
+
+  const filtered = items.filter(it=>{
+    if(HIDE_SKIPPED && !it.is_image) return false;
+    if(USER_FILTER){
+      const q=USER_FILTER.toLowerCase();
+      if(!(it.texture.toLowerCase().includes(q) || (u.user.email||"").toLowerCase().includes(q))) return false;
+    }
+    return true;
+  });
+
+  if(!filtered.length){ const e=document.createElement("div"); e.className="empty"; e.textContent="(sin items con el filtro actual)"; box.appendChild(e); return box; }
+
+  const grid=document.createElement("div"); grid.className="grid";
+  for(const it of filtered){
+    const div=document.createElement("div"); div.className="tile";
+    if(it.is_image) div.appendChild(imgTileAdmin(u.record_id, it.texture));
+    else { const ph=document.createElement("div"); ph.style.height="120px"; ph.style.background="#1d2027"; ph.style.display="flex"; ph.style.alignItems="center"; ph.style.justifyContent="center"; ph.style.color="var(--mut)"; ph.style.fontSize="11px"; ph.textContent="📦 "+ (it.texture.split(".").pop()||"?"); div.appendChild(ph); }
+    const meta=document.createElement("div"); meta.className="meta";
+    const chip=document.createElement("span"); chip.className="chip "+it.state;
+    chip.textContent={READY:"sin normal",QUEUED:"en cola",PROCESSING:"procesando…",HAS_NORMAL:"✓ con normal",ERROR:"error",SKIPPED:"no imagen"}[it.state]||it.state;
+    meta.appendChild(chip);
+    const nm=document.createElement("div"); nm.className="name"; nm.textContent=it.texture; meta.appendChild(nm);
+    if(it.has_normal){
+      const sub=document.createElement("div"); sub.className="name"; sub.style.opacity=".7"; sub.textContent="normal: "+it.normal; meta.appendChild(sub);
+    }
+    if(it.state==="READY"||it.state==="ERROR"){
+      const b=document.createElement("button"); b.textContent=it.state==="ERROR"?"Reintentar":"Generar normal";
+      b.onclick=()=>adminEnqueue(u.record_id, it.texture, b); meta.appendChild(b);
+    }
+    if(it.state==="ERROR" && it.error){ const e=document.createElement("div"); e.className="name"; e.style.color="var(--err)"; e.textContent=it.error; meta.appendChild(e); }
+    div.appendChild(meta); grid.appendChild(div);
+  }
+  box.appendChild(grid);
+  return box;
+}
+function renderAll(users){
+  const box=$("#usersBox"); box.innerHTML="";
+  if(!users.length){ box.innerHTML='<div class="empty">No hay registros en PocketBase</div>'; return; }
+  for(const u of users) box.appendChild(userBlock(u));
+}
+async function adminEnqueue(recordId, filename, btn){
+  if(btn){ btn.disabled=true; btn.textContent="Encolando…"; }
+  try{
+    const r=await fetch("/api/admin/enqueue",{method:"POST",headers:{...ADMIN_HEADERS(),"Content-Type":"application/json"},body:JSON.stringify({record_id:recordId,filename})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(d.detail||"Error");
+    toast("Encolada: "+filename); loadAll(); pollQueue();
+  }catch(err){ toast("✗ "+err.message); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent="Generar normal"; } loadAll(); }
+}
+async function adminAutoProcess(recordId){
+  if(!await confirmDanger("⚠ Auto-procesar este registro","Esto encola TODAS las texturas procesables del registro. ¿Continuar?")) return;
+  try{
+    const r=await fetch(`/api/admin/auto-process/${encodeURIComponent(recordId)}`,{method:"POST",headers:ADMIN_HEADERS()});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(d.detail||"Error");
+    toast(`Encoladas ${d.queued} texturas`); loadAll(); pollQueue();
+  }catch(err){ toast("✗ "+err.message); }
+}
+
+// ── Logs ─────────────────────────────────────────────────────────────────────
 async function refreshLogs(){
   try{ const r=await fetch("/api/logs?lines=200"); const t=await r.text();
     const box=$("#logBox"); box.textContent=t||"(sin logs)"; $("#ldot").className="dot ok"; box.scrollTop=box.scrollHeight;
   }catch{ $("#ldot").className="dot bad"; }
 }
 
+// ── Listeners ────────────────────────────────────────────────────────────────
 $("#loginBtn").onclick=login;
 $("#password").addEventListener("keydown",e=>{ if(e.key==="Enter") login(); });
-$("#refreshBtn").onclick=()=>{ loadTextures(); refreshLogs(); checkHealth(); pollQueue(); };
+$("#refreshBtn").onclick=()=>{ refreshLogs(); checkHealth(); pollQueue(); if(MODE==="mine") loadMine(); if(MODE==="all") loadAll(); };
 $("#autoBtn").onclick=autoProcess;
 $("#delAllBtn").onclick=delAll;
 $("#logoutBtn").onclick=logout;
+$("#modeMineBtn").onclick=()=>setMode("mine");
+$("#modeAllBtn").onclick=()=>setMode("all");
+$("#adminOk").onclick=doAdminLogin;
+$("#adminCancel").onclick=closeAdminLogin;
+$("#adminTokenInput").addEventListener("keydown",e=>{ if(e.key==="Enter") doAdminLogin(); });
+$("#hideSkippedCb").onchange=(e)=>{ HIDE_SKIPPED=e.target.checked; if(LAST_ADMIN_OVERVIEW) renderAll(LAST_ADMIN_OVERVIEW.users||[]); };
+$("#userFilter").oninput=(e)=>{ USER_FILTER=e.target.value; if(LAST_ADMIN_OVERVIEW) renderAll(LAST_ADMIN_OVERVIEW.users||[]); };
 
+// ── Boot ─────────────────────────────────────────────────────────────────────
 (function(){
   const t=sessionStorage.getItem("dn_token"), u=sessionStorage.getItem("dn_user");
-  if(t&&u){ TOKEN=t; USER=JSON.parse(u); enterApp(); }
+  const a=sessionStorage.getItem("dn_admin");
+  if(t&&u){ TOKEN=t; USER=JSON.parse(u); if(a) ADMIN_TOKEN=a; enterApp(); checkAdminStatus(); }
 })();
 </script>
 </body>

@@ -36,6 +36,18 @@ NORMAL_FORMAT_CHOICES = ("png", "exr")
 DEFAULT_STRENGTH = 2.0
 DEFAULT_FORMAT = "png"
 
+# Extensiones que el worker / la cola saben procesar como bump map.
+# Todo lo que NO esté acá (fbx, obj, 3ds, blend, glb, gltf, etc.) se salta.
+IMAGE_EXTS = frozenset({
+    ".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff", ".tga",
+})
+
+
+def is_image_name(name: str) -> bool:
+    """True si el archivo es una imagen que podemos convertir a normal."""
+    ext = os.path.splitext(os.path.basename(name))[1].lower()
+    return ext in IMAGE_EXTS
+
 
 def _normalize(vec: np.ndarray) -> np.ndarray:
     length = np.expand_dims(np.linalg.norm(vec, axis=-1), axis=-1)

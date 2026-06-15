@@ -17,6 +17,9 @@ tmp/
 *.tmp
 tmp_*.png
 
+# One-off diagnostic scripts (no son parte del repo)
+diag*.py
+
 # OS
 .DS_Store
 Thumbs.db

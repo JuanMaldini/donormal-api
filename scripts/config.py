@@ -15,16 +15,32 @@ from dataclasses import dataclass
 
 # Carga .env si python-dotenv está disponible (en local). En docker las vars
 # vienen inyectadas por compose, así que esto es solo conveniencia.
+# Usamos encoding="utf-8-sig" para que un eventual BOM UTF-8 al inicio del
+# archivo no rompa la primera variable (PB_URL solía quedar vacía por eso).
 try:
     from dotenv import load_dotenv
 
-    load_dotenv()
+    load_dotenv(encoding="utf-8-sig")
 except Exception:  # pragma: no cover - dotenv es opcional
     pass
 
 
 class ConfigError(RuntimeError):
     """Falta una variable obligatoria o tiene un valor inválido."""
+
+
+# Mínimo razonable para un JWT de PocketBase (arranca con "eyJ..." y mide >100).
+# Bajamos a 30 para no romper con tokens más cortos, pero igual descartamos
+# placeholders típicos.
+_MIN_TOKEN_LEN = 30
+
+# Placeholders comunes que la gente deja sin querer.
+_TOKEN_PLACEHOLDERS = frozenset({
+    "changeme", "change-me", "todo", "fixme",
+    "xxx", "xxxx", "xxxxxx",
+    "placeholder", "your_token", "your-token", "token_here", "put_your_token",
+    "example", "sample", "test", "demo", "1234", "12345678",
+})
 
 
 _REQUIRED = ("PB_URL", "PB_TOKEN", "PB_USERS", "PB_DATA")
@@ -44,6 +60,23 @@ def _require(name: str) -> str:
             f"Falta la variable de entorno obligatoria: {name}. "
             f"Copiá .env.example a .env y rellenala (sin fallbacks)."
         )
+    if name == "PB_TOKEN":
+        if len(value) < _MIN_TOKEN_LEN:
+            raise ConfigError(
+                f"PB_TOKEN parece inválido (muy corto: {len(value)} chars, "
+                f"mínimo esperado {_MIN_TOKEN_LEN}). "
+                f"Copiá el token real desde PocketBase."
+            )
+        if value.lower() in _TOKEN_PLACEHOLDERS:
+            raise ConfigError(
+                f"PB_TOKEN parece un placeholder ({value!r}). "
+                f"Reemplazalo por el token real de PocketBase."
+            )
+    if name == "PB_URL":
+        if not (value.startswith("http://") or value.startswith("https://")):
+            raise ConfigError(
+                f"PB_URL debe empezar con http:// o https:// (recibido: {value!r})"
+            )
     return value
 
 
@@ -92,6 +125,11 @@ class Config:
             worker_enabled=worker_enabled,
             worker_scan_interval=scan,
         )
+
+
+# Variable opcional: si está, el dashboard habilita el modo admin
+# (ver /api/admin/* en frontend/app.py).
+# No es obligatoria: si está vacía o no existe, el modo admin queda deshabilitado.
 
 
 # Singleton perezoso

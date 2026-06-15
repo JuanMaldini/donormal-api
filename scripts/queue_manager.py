@@ -28,7 +28,7 @@ from typing import Callable
 
 from config import Config
 from logs import get_logger
-from normalmap import bump_to_normal_bytes, is_normal_name
+from normalmap import IMAGE_EXTS, bump_to_normal_bytes, is_image_name, is_normal_name
 from pocketbase import PBAdmin, PBError, expected_normal_name
 
 log = get_logger()
@@ -78,12 +78,18 @@ class NormalQueue:
 
         Reglas de denegación:
           - el archivo ya es una normal (_normal)
+          - el archivo no es una imagen procesable (fbx, obj, glb, ...)
           - ya está EN_COLA o PROCESANDO
         El chequeo de "ya tiene normal" lo hace quien llama (tiene el registro)
         y además lo re-valida el consumidor antes de generar.
         """
         if is_normal_name(filename):
             raise ValueError("Ese archivo ya es una normal; no se procesa.")
+        if not is_image_name(filename):
+            raise ValueError(
+                f"Solo se procesan imagenes ({', '.join(sorted(IMAGE_EXTS))}); "
+                f"{filename!r} no es procesable."
+            )
         key = (user_id, filename)
         with self._lock:
             rt = self._runtime.get(key)

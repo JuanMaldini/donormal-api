@@ -15,6 +15,7 @@ es que acá el algoritmo viene **horneado en el contenedor** y usa
 1. `copy .env.example .env` y rellená las 4 variables (sin fallback: si falta
    una, no arranca):
    - `PB_URL`, `PB_TOKEN`, `PB_USERS`, `PB_DATA`.
+   - Opcional: `ADMIN_TOKEN` para activar el modo admin del dashboard.
 2. **Dashboard** (localhost): doble clic en `startWeb.bat` → abre
    `http://localhost:8753`. Entrás con **tu mismo usuario** del web.
 
@@ -26,6 +27,15 @@ es que acá el algoritmo viene **horneado en el contenedor** y usa
    ya creadas, y abajo los **logs** en vivo. En cada textura sin normal hay un
    botón **Generar normal** (procesamiento on-demand, una a la vez).
 4. `stopWeb.bat` para bajar el dashboard.
+
+### Modo admin (opcional)
+
+Si en `.env` ponés `ADMIN_TOKEN=<algo-seguro>`, el dashboard muestra arriba
+a la derecha un toggle **“Mis texturas / Todas (admin)”**. La segunda vista
+lista los registros de **todos** los usuarios, con sus texturas y normales,
+y permite encolar o auto-procesar cualquier registro.
+
+Sin `ADMIN_TOKEN` el modo admin queda oculto.
 
 ### Worker automático (fase 2, opcional)
 
@@ -58,6 +68,9 @@ logs/                (gitignored)
 - **Vínculo textura↔normal**: por el flag `_normal` en el nombre (igual que tu
   repo). El emparejado tolera el sufijo aleatorio que PocketBase añade a los
   archivos.
+- **Filtro de `relation`**: el dashboard prueba `relation = "user_id"`
+  (string) **y** `relation.id ?= "user_id"` (campo relation de PocketBase)
+  con fallback automático, igual que `Clothfigurator_web`.
 - **Las normales se guardan en el mismo registro** del usuario (`file+`), así el
   web las ve al instante (ya tiene preparado `textureNormalURL`).
 - **Solo localhost**: el dashboard se publica en `127.0.0.1:8753`.
