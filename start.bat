@@ -1,27 +1,22 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-title donormal - start (worker)
+title donormal - start (worker nativo)
 
-REM Worker automatico (FASE 2): escanea PocketBase y genera las normales
-REM faltantes en bucle. Para el flujo on-demand del dashboard NO hace falta.
+REM Levanta SOLO el worker automatico (nativo, sin Docker, sin frontend).
+REM El worker escanea PocketBase y genera las normales faltantes en bucle.
+REM Para el flujo on-demand del dashboard NO hace falta el worker: el
+REM dashboard encola y procesa cada item a pedido del usuario.
+REM
+REM Usar este bat SOLO si queres que se procesen normales en background
+REM (ej: la noche, para no esperar en el dashboard).
 
 if not exist ".env" (
   echo [donormal] Falta .env. Copia .env.example a .env y completalo.
   pause & exit /b 1
 )
 
-REM ---------- Intento 1: Docker ----------
-docker info >nul 2>&1
-if %errorlevel%==0 (
-  echo [donormal] Docker detectado. Worker en contenedor...
-  docker compose -f deploy\docker-compose.yml --profile auto up -d --build worker
-  if errorlevel 1 ( echo [donormal] Error al levantar el worker. & pause & exit /b 1 )
-  goto done
-)
-
-REM ---------- Fallback: Python nativo ----------
-echo [donormal] Docker no esta corriendo. Usando modo nativo (Python)...
+REM ---------- Modo nativo: solo Python, sin Docker ----------
 where python >nul 2>&1
 if errorlevel 1 ( echo [donormal] Falta Python en PATH. Instalalo desde python.org & pause & exit /b 1 )
 
@@ -36,6 +31,7 @@ if errorlevel 1 ( echo [donormal] Error instalando dependencias. & pause & exit 
 echo [donormal] Levantando worker nativo (cmd visible)...
 start "donormal-worker" "%~dp0.venv\Scripts\python.exe" scripts\worker.py
 
-:done
+echo.
 echo [donormal] Worker corriendo. Logs: logs\donormal.log
+echo [donormal] Para cerrarlo, ejecuta stop.bat.
 endlocal
