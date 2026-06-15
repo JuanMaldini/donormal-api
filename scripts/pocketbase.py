@@ -34,6 +34,15 @@ class PBError(RuntimeError):
     pass
 
 
+class PBFilterBadRequest(PBError):
+    """El filtro de PB no es valido para esta colección (HTTP 400)."""
+
+    def __init__(self, filter_str: str, body: str) -> None:
+        super().__init__(f"filtro invalido: {filter_str}")
+        self.filter = filter_str
+        self.body = body
+
+
 # --------------------------------------------------------------------------- #
 # Login de usuario final (dashboard)                                          #
 # --------------------------------------------------------------------------- #
@@ -115,32 +124,62 @@ class PBAdmin:
         r.raise_for_status()
 
     # -- registros ---------------------------------------------------------- #
+    # Page size y filtros replican la lógica de
+    # Clothfigurator_web/src/utils/pocketbaseUserData.ts:getAssignedRecordByUser
+    # para que el dashboard se comporte exactamente igual que el control panel
+    # del web original.
+    RELATION_LOOKUP_PAGE_SIZE = 50
+
+    @staticmethod
+    def _record_belongs_to_user(record: dict, user_id: str) -> bool:
+        """True si el `relation` del record matchea user_id (string o array)."""
+        rel = record.get("relation")
+        if isinstance(rel, str):
+            return rel.strip() == user_id
+        if isinstance(rel, list):
+            return any((isinstance(x, str) and x.strip() == user_id) for x in rel)
+        return False
+
+    def _list_by_filter(self, filt: str) -> list[dict]:
+        r = self._client.get(
+            f"/api/collections/{self.cfg.pb_data}/records",
+            params={"filter": filt, "perPage": self.RELATION_LOOKUP_PAGE_SIZE},
+        )
+        if r.status_code == 400:
+            # 400 = el filtro no es valido para esta colección (por ej. la
+            # relation es un string y `relation.id ?= ...` no aplica). El web
+            # hace lo mismo: catch de 400 -> fallback a la otra variante.
+            raise PBFilterBadRequest(filt, r.text)
+        r.raise_for_status()
+        return r.json().get("items", [])
+
     def get_record_for_user(self, user_id: str) -> dict | None:
         """Registro de PB_DATA asignado al usuario (o None).
 
-        La `relation` puede ser:
-          - string con el id del user guardado a mano, o
-          - campo relation de PocketBase (que se filtra con `relation.id`).
-        Probamos ambas variantes con fallback, igual que hace
-        Clothfigurator_web/src/utils/pocketbaseUserData.ts, para no
-        depender de cómo esté armada la colección.
+        Replica exactamente el flujo de
+        Clothfigurator_web/src/utils/pocketbaseUserData.ts:
+          1. Probar `relation.id ?= "X"` (campo relation de PocketBase).
+          2. Si falla con 400 (la relación es string, no relation-field),
+             probar `relation ?= "X"`.
+          3. Validar que el primer record devuelto realmente pertenece al
+             user (defensa contra records "huérfanos").
         """
-        for filt in (f'relation = "{user_id}"', f'relation.id ?= "{user_id}"'):
+        for label, filt in (
+            ("relation.id", f'relation.id ?= "{user_id}"'),
+            ("relation",    f'relation ?= "{user_id}"'),
+        ):
             try:
-                r = self._client.get(
-                    f"/api/collections/{self.cfg.pb_data}/records",
-                    params={"filter": filt, "perPage": 1},
-                )
+                items = self._list_by_filter(filt)
+            except PBFilterBadRequest as exc:
+                log.debug("get_record_for_user: filtro %s dio 400, probando fallback", exc.filter)
+                continue
             except httpx.HTTPError as exc:
-                log.debug("get_record_for_user: HTTP error con %s: %s", filt, exc)
+                log.debug("get_record_for_user: HTTP error con %s: %s", label, exc)
                 continue
-            if r.status_code != 200:
-                log.debug("get_record_for_user: status %s con %s", r.status_code, filt)
-                continue
-            items = r.json().get("items", [])
-            if items:
-                log.debug("get_record_for_user: match con filtro %s", filt)
-                return items[0]
+            for rec in items:
+                if self._record_belongs_to_user(rec, user_id):
+                    log.debug("get_record_for_user: match con filtro %s", label)
+                    return rec
         return None
 
     def iter_all_records(self) -> list[dict]:
