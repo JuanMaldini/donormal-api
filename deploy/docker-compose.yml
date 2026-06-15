@@ -1,0 +1,32 @@
+# dnormal — stack mínimo (los .bat lo invocan; contexto = raíz del proyecto)
+#   dashboard : siempre (startWeb.bat)
+#   worker    : fase 2, perfil "auto" (start.bat)
+
+services:
+  dashboard:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: dnormal:latest
+    container_name: dnormal-dashboard
+    env_file: ../.env
+    ports:
+      - "127.0.0.1:8753:8753"   # solo localhost
+    volumes:
+      - ../logs:/app/logs
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: dnormal:latest
+    container_name: dnormal-worker
+    env_file: ../.env
+    environment:
+      - WORKER_ENABLED=true
+    command: ["python", "/app/scripts/worker.py"]
+    volumes:
+      - ../logs:/app/logs
+    restart: unless-stopped
+    profiles: ["auto"]
