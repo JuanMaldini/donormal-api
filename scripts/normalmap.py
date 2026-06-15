@@ -16,17 +16,18 @@ Algoritmo:
     - color = normal * 0.5 + 0.5
     - PNG  -> uint8 * 255
     - EXR  -> float32
-    - Nombre de salida: sustituye "bump" (palabra completa) por "normal";
-      si no hay "bump", añade "_normal".  ->  <base>_normal.<fmt>
+    - Nombre de salida: `{nombre-original}_normal.<fmt>`. El nombre
+      original se respeta tal cual (incluso si contiene "bump").
+      PocketBase le agrega su sufijo aleatorio al subir, asi que el
+      nombre final en PB es `{nombre-original}_normal_XXXXXXX.png`.
 
 Uso CLI (compatible con bumptonormalmap.py):
-    python normalmap.py <ruta_imagen> <strength> <png|exr>
+    python normalmap.py <ruta_imagen> <strength> [png|exr]
 """
 
 from __future__ import annotations
 
 import os
-import re
 import sys
 
 import cv2
@@ -59,23 +60,17 @@ def _normalize(vec: np.ndarray) -> np.ndarray:
 def normal_output_name(input_name: str, output_format: str = DEFAULT_FORMAT) -> str:
     """Devuelve el nombre de archivo de salida para una textura dada.
 
-    Convención: SIN prefijo, sufijo `_normal` (formato original del
-    bumptonormalmap). El stem de la textura queda intacto y la normal
-    queda como `<root>.<ext>_normal.png` después de que PB le agregue su
-    sufijo aleatorio. Sustituye `bump` (palabra completa) por `normal`
-    en el root.  Esto se alinea con el formato que ya aceptaba
-    Clothfigurator_web y PocketBase no normaliza.
+    Convención: composición final = `{nombre-original}_normal.{ext}`.
+    Sin reemplazo de "bump" -> "normal" (se respeta el nombre original tal
+    cual); sin prefijo; sufijo estricto `_normal` antes de la extensión.
 
-    Ejemplos (antes de que PB agregue su sufijo):
+    Ejemplos (antes de que PB agregue su sufijo aleatorio):
       lauren_fabric_v79t000mki.jpg   -> lauren_fabric_v79t000mki_normal.png
-      chair_bump.jpg                 -> chair_normal.png  (bump -> normal)
+      chair_bump.jpg                 -> chair_bump_normal.png
+      fabric_simple.jpg              -> fabric_simple_normal.png
     """
     no_ext, _ = os.path.splitext(os.path.basename(input_name))
-    pattern = r"(?<![a-zA-Z])bump(?![a-zA-Z])"
-    new_no_ext = re.sub(pattern, "normal", no_ext, flags=re.IGNORECASE)
-    if "normal" not in new_no_ext.lower():
-        new_no_ext += "_normal"
-    return f"{new_no_ext}.{output_format}"
+    return f"{no_ext}_normal.{output_format}"
 
 
 def is_normal_name(name: str) -> bool:
