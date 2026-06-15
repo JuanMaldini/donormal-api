@@ -1,4 +1,4 @@
-# dnormal
+# donormal
 
 Generador de **normal maps** para las texturas de Clothfigurator, conectado a
 la **misma** instancia de PocketBase que `Clothfigurator_web` (mismas
@@ -46,7 +46,7 @@ scripts/
   config.py      carga .env, falla si falta algo
   pocketbase.py  cliente PB (auth, listar, subir/borrar, emparejar)
   worker.py      procesamiento automático (fase 2)
-  logs.py        logging a stdout + logs/dnormal.log
+  logs.py        logging a stdout + logs/donormal.log
 frontend/
   app.py             FastAPI: login, listar, generar, proxy de imágenes, logs
   static/index.html  dashboard minimalista

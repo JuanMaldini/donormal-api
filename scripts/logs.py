@@ -1,7 +1,7 @@
 """
 logs.py
 =======
-Logging compartido. Escribe a stdout (lo captura docker) y a logs/dnormal.log,
+Logging compartido. Escribe a stdout (lo captura docker) y a logs/donormal.log,
 que el dashboard lee para mostrar el panel de logs en vivo.
 """
 
@@ -14,12 +14,12 @@ from logging.handlers import RotatingFileHandler
 _LOG_DIR = os.environ.get("LOG_DIR") or os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logs"
 )
-LOG_FILE = os.path.join(_LOG_DIR, "dnormal.log")
+LOG_FILE = os.path.join(_LOG_DIR, "donormal.log")
 
 _configured = False
 
 
-def get_logger(name: str = "dnormal") -> logging.Logger:
+def get_logger(name: str = "donormal") -> logging.Logger:
     global _configured
     logger = logging.getLogger(name)
     if _configured:
@@ -38,7 +38,7 @@ def get_logger(name: str = "dnormal") -> logging.Logger:
     )
     fileh.setFormatter(fmt)
 
-    root = logging.getLogger("dnormal")
+    root = logging.getLogger("donormal")
     root.setLevel(logging.INFO)
     root.addHandler(stream)
     root.addHandler(fileh)

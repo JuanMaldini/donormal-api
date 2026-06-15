@@ -1,4 +1,4 @@
-# dnormal — stack mínimo (los .bat lo invocan; contexto = raíz del proyecto)
+# donormal — stack mínimo (los .bat lo invocan; contexto = raíz del proyecto)
 #   dashboard : siempre (startWeb.bat)
 #   worker    : fase 2, perfil "auto" (start.bat)
 
@@ -7,8 +7,8 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile
-    image: dnormal:latest
-    container_name: dnormal-dashboard
+    image: donormal:latest
+    container_name: donormal-dashboard
     env_file: ../.env
     ports:
       - "127.0.0.1:8753:8753"   # solo localhost
@@ -20,8 +20,8 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile
-    image: dnormal:latest
-    container_name: dnormal-worker
+    image: donormal:latest
+    container_name: donormal-worker
     env_file: ../.env
     environment:
       - WORKER_ENABLED=true

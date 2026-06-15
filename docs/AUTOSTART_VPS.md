@@ -20,18 +20,18 @@ revivan si se caen o si reinicia el Docker daemon.
 
 ## 2. Que el stack arranque al bootear el server (systemd)
 
-Crear `/etc/systemd/system/dnormal.service`:
+Crear `/etc/systemd/system/donormal.service`:
 
 ```ini
 [Unit]
-Description=dnormal stack
+Description=donormal stack
 Requires=docker.service
 After=docker.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/opt/dnormal          # ruta donde clonaste el repo
+WorkingDirectory=/opt/donormal          # ruta donde clonaste el repo
 ExecStart=/usr/bin/docker compose --profile auto up -d --build
 ExecStop=/usr/bin/docker compose --profile auto down
 
@@ -43,7 +43,7 @@ Activar:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now dnormal.service
+sudo systemctl enable --now donormal.service
 ```
 
 ## 3. Flujo final (cuando se integre Unreal)
@@ -58,4 +58,4 @@ sudo systemctl enable --now dnormal.service
 
 - El dashboard sigue en `127.0.0.1:8753`. Si lo querés exponer, poné un
   reverse proxy (Caddy/Nginx) con auth delante — NO lo publiques directo.
-- Logs persistentes en `./logs/dnormal.log` (montado como volumen).
+- Logs persistentes en `./logs/donormal.log` (montado como volumen).

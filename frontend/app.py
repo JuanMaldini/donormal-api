@@ -1,5 +1,5 @@
 """
-app.py — Backend del dashboard de dnormal (FastAPI)
+app.py — Backend del dashboard de donormal (FastAPI)
 ===================================================
 - Sirve el dashboard estático (static/index.html).
 - Login con el MISMO usuario de Clothfigurator_web (colección PB_USERS).
@@ -36,7 +36,7 @@ from normalmap import is_normal_name
 log = get_logger()
 cfg = get_config()  # falla acá si faltan vars obligatorias (sin fallback)
 
-app = FastAPI(title="dnormal dashboard")
+app = FastAPI(title="donormal dashboard")
 admin = PBAdmin(cfg)
 nq = NormalQueue(admin=admin, cfg=cfg)
 
