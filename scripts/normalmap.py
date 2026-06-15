@@ -59,8 +59,16 @@ def _normalize(vec: np.ndarray) -> np.ndarray:
 def normal_output_name(input_name: str, output_format: str = DEFAULT_FORMAT) -> str:
     """Devuelve el nombre de archivo de salida para una textura dada.
 
-    Sustituye "bump" (palabra completa, case-insensitive) por "normal".
-    Si no hay "bump", añade "_normal".  (Convención Blender / Node Wrangler.)
+    Convención: SIN prefijo, sufijo `_normal` (formato original del
+    bumptonormalmap). El stem de la textura queda intacto y la normal
+    queda como `<root>.<ext>_normal.png` después de que PB le agregue su
+    sufijo aleatorio. Sustituye `bump` (palabra completa) por `normal`
+    en el root.  Esto se alinea con el formato que ya aceptaba
+    Clothfigurator_web y PocketBase no normaliza.
+
+    Ejemplos (antes de que PB agregue su sufijo):
+      lauren_fabric_v79t000mki.jpg   -> lauren_fabric_v79t000mki_normal.png
+      chair_bump.jpg                 -> chair_normal.png  (bump -> normal)
     """
     no_ext, _ = os.path.splitext(os.path.basename(input_name))
     pattern = r"(?<![a-zA-Z])bump(?![a-zA-Z])"
@@ -71,7 +79,11 @@ def normal_output_name(input_name: str, output_format: str = DEFAULT_FORMAT) -> 
 
 
 def is_normal_name(name: str) -> bool:
-    """True si el nombre corresponde a una normal ya generada (flag _normal)."""
+    """True si el nombre corresponde a una normal ya generada.
+
+    Detecta el flag `_normal` en el stem (cualquier posición). Igual que
+    la convención vieja — NO se usa prefijo.
+    """
     no_ext, _ = os.path.splitext(os.path.basename(name))
     return "_normal" in no_ext.lower()
 

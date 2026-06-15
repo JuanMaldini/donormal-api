@@ -78,10 +78,14 @@ def _noext(filename: str) -> str:
 def normal_matches_texture(normal_name: str, texture_name: str) -> bool:
     """True si `normal_name` es la normal de `texture_name`.
 
-    La normal se genera con normal_output_name(texture) y PocketBase le agrega
-    su sufijo aleatorio después (_RRRRRRRRRR). Por eso comparamos contra la base
-    esperada, tolerando ese sufijo. Funciona tanto para el caso `_normal` como
-    para el reemplazo `bump -> normal`.
+    Convención: sin prefijo. La normal se genera como
+    `normal_output_name(texture)` = `<root>_normal.png` (o `<root>` con
+    bump->normal). PocketBase le agrega su sufijo aleatorio al subirla,
+    así que la búsqueda es tolerante a ese sufijo (`<root>_normal.png`
+    puede ser `<root>_normal_XXXXXXX.png`).
+
+    Funciona también con el caso `bump -> normal` (ej: `chair_bump.jpg`
+    genera `chair_normal.png` y la búsqueda matchea con tolerancia).
     """
     expected = _noext(normal_output_name(texture_name, "png"))
     nm = _noext(normal_name)
