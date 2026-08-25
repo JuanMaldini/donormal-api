@@ -1,16 +1,14 @@
 """
 config.py
 =========
-Configuracion del worker. Tres variables de entorno y nada mas.
+Configuracion del worker, entera desde el entorno.
 
-Sin fallbacks: si falta una, el worker NO arranca. Es a proposito -- un worker
-que arranca "a medias" apuntando a ningun lado se pasa el dia logueando errores
-y nadie se entera.
+Sin fallbacks: si falta una variable, el worker NO arranca y dice cual falta.
+Es a proposito -- un worker que arranca "a medias" apuntando a ningun lado se
+pasa el dia logueando 404 y nadie se entera de por que.
 
-Los nombres de las colecciones NO son variables de entorno. Son fijos en toda
-instancia de Clothfigurator, asi que como variable solo agregaban una forma mas
-de configurar mal el worker (apuntarlo a una coleccion que no existe y ver un
-404 en vez de un error claro).
+En la VPS estas variables se cargan en el panel de Dokploy (Environment), no
+en un .env commiteado.
 """
 
 from __future__ import annotations
@@ -31,10 +29,6 @@ class ConfigError(RuntimeError):
     """Falta una variable obligatoria."""
 
 
-# --- Colecciones (fijas) --------------------------------------------------- #
-COL_USERS = "clothfigurator_users"
-COL_TEXTURES = "clothfigurator_textures"
-
 # --- Algoritmo ------------------------------------------------------------- #
 NORMAL_STRENGTH = 2.0
 NORMAL_FORMAT = "png"
@@ -52,7 +46,13 @@ POLL_INTERVAL = 300
 # textura queda trabada en processing para siempre y nadie la reclama.
 STALE_CLAIM_SECONDS = 600
 
-_REQUIRED = ("PB_URL", "PB_WORKER_EMAIL", "PB_WORKER_PASSWORD")
+_REQUIRED = (
+    "PB_URL",
+    "PB_WORKER_EMAIL",
+    "PB_WORKER_PASSWORD",
+    "PB_USERS",
+    "PB_TEXTURES",
+)
 
 
 @dataclass(frozen=True)
@@ -60,6 +60,8 @@ class Config:
     pb_url: str
     worker_email: str
     worker_password: str
+    col_users: str
+    col_textures: str
 
     @staticmethod
     def load() -> "Config":
@@ -75,6 +77,8 @@ class Config:
             pb_url=os.environ["PB_URL"].strip().rstrip("/"),
             worker_email=os.environ["PB_WORKER_EMAIL"].strip(),
             worker_password=os.environ["PB_WORKER_PASSWORD"].strip(),
+            col_users=os.environ["PB_USERS"].strip(),
+            col_textures=os.environ["PB_TEXTURES"].strip(),
         )
 
 

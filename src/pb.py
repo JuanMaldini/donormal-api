@@ -24,7 +24,7 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 
-from config import COL_TEXTURES, COL_USERS, MAX_ATTEMPTS, STALE_CLAIM_SECONDS, Config
+from config import MAX_ATTEMPTS, STALE_CLAIM_SECONDS, Config
 from logs import get_logger
 
 log = get_logger()
@@ -70,7 +70,7 @@ class PB:
     # -- auth --------------------------------------------------------------- #
     def login(self) -> None:
         r = self._c.post(
-            f"/api/collections/{COL_USERS}/auth-with-password",
+            f"/api/collections/{self.cfg.col_users}/auth-with-password",
             json={
                 "identity": self.cfg.worker_email,
                 "password": self.cfg.worker_password,
@@ -80,7 +80,7 @@ class PB:
             raise PBError(
                 f"Login del worker rechazado ({r.status_code}). Revisa "
                 f"PB_WORKER_EMAIL / PB_WORKER_PASSWORD y que el usuario exista "
-                f"en {COL_USERS}."
+                f"en {self.cfg.col_users}."
             )
         self._token = r.json().get("token") or ""
         if not self._token:
@@ -116,11 +116,11 @@ class PB:
         self.login()
 
         r = self._request(
-            "GET", f"/api/collections/{COL_TEXTURES}/records", params={"perPage": 1}
+            "GET", f"/api/collections/{self.cfg.col_textures}/records", params={"perPage": 1}
         )
         if r.status_code in (401, 403):
             raise PBError(
-                f"El worker se autentico pero no puede leer {COL_TEXTURES}. "
+                f"El worker se autentico pero no puede leer {self.cfg.col_textures}. "
                 f"Revisa que su usuario tenga role=worker y la regla List de "
                 f"la coleccion."
             )
@@ -138,7 +138,7 @@ class PB:
         flt = '(normal_status="pending" || normal_status="") && file_albedo!=""'
         r = self._request(
             "GET",
-            f"/api/collections/{COL_TEXTURES}/records",
+            f"/api/collections/{self.cfg.col_textures}/records",
             params={"filter": flt, "perPage": limit, "sort": "created"},
         )
         r.raise_for_status()
@@ -146,7 +146,7 @@ class PB:
 
     def get(self, record_id: str) -> Texture | None:
         r = self._request(
-            "GET", f"/api/collections/{COL_TEXTURES}/records/{record_id}"
+            "GET", f"/api/collections/{self.cfg.col_textures}/records/{record_id}"
         )
         if r.status_code == 404:
             return None
@@ -167,7 +167,7 @@ class PB:
         )
         r = self._request(
             "GET",
-            f"/api/collections/{COL_TEXTURES}/records",
+            f"/api/collections/{self.cfg.col_textures}/records",
             params={"filter": flt, "perPage": 200},
         )
         r.raise_for_status()
@@ -181,7 +181,7 @@ class PB:
     def _patch(self, record_id: str, data: dict) -> httpx.Response:
         r = self._request(
             "PATCH",
-            f"/api/collections/{COL_TEXTURES}/records/{record_id}",
+            f"/api/collections/{self.cfg.col_textures}/records/{record_id}",
             json=data,
         )
         if r.status_code != 200:
@@ -218,7 +218,7 @@ class PB:
         """
         r = self._request(
             "PATCH",
-            f"/api/collections/{COL_TEXTURES}/records/{record_id}",
+            f"/api/collections/{self.cfg.col_textures}/records/{record_id}",
             files={"file_normal": (filename, data, content_type)},
             data={"normal_status": "done", "attempts": "0", "error_log": ""},
         )
@@ -263,7 +263,7 @@ class PB:
         lo que hace que el visitante del link publico y Unreal (que no arrastra
         ninguna sesion) puedan leerlos.
         """
-        r = self._c.get(f"/api/files/{COL_TEXTURES}/{record_id}/{filename}")
+        r = self._c.get(f"/api/files/{self.cfg.col_textures}/{record_id}/{filename}")
         if r.status_code != 200:
             raise PBError(f"No se pudo bajar {filename}: {r.status_code}")
         return r.content
@@ -292,8 +292,8 @@ class PB:
                     payload = line[5:].strip()
                     if event == "PB_CONNECT":
                         self._subscribe(json.loads(payload).get("clientId", ""))
-                        log.info("Realtime conectado a %s", COL_TEXTURES)
-                    elif event == COL_TEXTURES and payload:
+                        log.info("Realtime conectado a %s", self.cfg.col_textures)
+                    elif event == self.cfg.col_textures and payload:
                         yield json.loads(payload)
 
     def _subscribe(self, client_id: str) -> None:
@@ -302,7 +302,7 @@ class PB:
         r = self._request(
             "POST",
             "/api/realtime",
-            json={"clientId": client_id, "subscriptions": [COL_TEXTURES]},
+            json={"clientId": client_id, "subscriptions": [self.cfg.col_textures]},
         )
         if r.status_code not in (200, 204):
             raise PBError(f"No se pudo suscribir: {r.status_code} {r.text}")
