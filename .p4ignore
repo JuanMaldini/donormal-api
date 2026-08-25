@@ -1,0 +1,39 @@
+# ============================================================
+# .p4ignore - servicio API (Python + deploy)
+# Va versionado en el depot: lo comparte todo el equipo.
+# ============================================================
+
+# --- Secretos: NUNCA al depot ---
+.env
+.env.local
+
+# NOTA: .env.example SI se versiona. Documenta que variables
+# hacen falta, sin valores reales.
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# --- Node (frontend embebido) ---
+node_modules/
+dist/
+
+# --- Logs y temporales ---
+logs/
+*.log
+tmp/
+*.tmp
+tmp_*.png
+
+# --- Repo git anidado ---
+.git/
+
+# --- Editores / SO ---
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db

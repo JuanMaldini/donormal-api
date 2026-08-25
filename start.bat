@@ -1,42 +1,40 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-title dnormal - start (worker)
+title normal-worker (local)
 
-REM Worker automatico (FASE 2): escanea PocketBase y genera las normales
-REM faltantes en bucle. Para el flujo on-demand del dashboard NO hace falta.
+REM Corre el worker en TU maquina, contra la PocketBase que diga el .env.
+REM En la VPS no se usa esto: alla lo levanta Dokploy desde deploy/Dockerfile.
 
 if not exist ".env" (
-  echo [dnormal] Falta .env. Copia .env.example a .env y completalo.
+  echo [worker] Falta .env. Copia .env.example a .env y completalo.
   pause & exit /b 1
 )
 
-REM ---------- Intento 1: Docker ----------
+REM ---------- Docker si esta corriendo ----------
 docker info >nul 2>&1
 if %errorlevel%==0 (
-  echo [dnormal] Docker detectado. Worker en contenedor...
-  docker compose -f deploy\docker-compose.yml --profile auto up -d --build worker
-  if errorlevel 1 ( echo [dnormal] Error al levantar el worker. & pause & exit /b 1 )
-  goto done
+  echo [worker] Docker detectado. Levantando contenedor...
+  docker compose -f deploy\docker-compose.yml up -d --build
+  if errorlevel 1 ( echo [worker] Error al levantar. & pause & exit /b 1 )
+  echo [worker] Corriendo. Logs: docker logs -f normal-worker
+  goto :eof
 )
 
 REM ---------- Fallback: Python nativo ----------
-echo [dnormal] Docker no esta corriendo. Usando modo nativo (Python)...
+echo [worker] Docker no esta corriendo. Modo nativo...
 where python >nul 2>&1
-if errorlevel 1 ( echo [dnormal] Falta Python en PATH. Instalalo desde python.org & pause & exit /b 1 )
+if errorlevel 1 ( echo [worker] Falta Python en PATH. & pause & exit /b 1 )
 
 if not exist ".venv" (
-  echo [dnormal] Creando entorno virtual .venv ...
+  echo [worker] Creando .venv ...
   python -m venv .venv
 )
-echo [dnormal] Instalando dependencias (la primera vez tarda)...
+echo [worker] Instalando dependencias (la primera vez tarda)...
 ".venv\Scripts\python.exe" -m pip install -q --disable-pip-version-check -r deploy\requirements.txt
-if errorlevel 1 ( echo [dnormal] Error instalando dependencias. & pause & exit /b 1 )
+if errorlevel 1 ( echo [worker] Error instalando dependencias. & pause & exit /b 1 )
 
-echo [dnormal] Levantando worker nativo...
-set WORKER_ENABLED=true
-start "dnormal-worker" /min "%~dp0.venv\Scripts\python.exe" scripts\worker.py
+echo [worker] Arrancando. Ctrl+C para parar.
+".venv\Scripts\python.exe" src\main.py
 
-:done
-echo [dnormal] Worker corriendo. Logs: logs\dnormal.log
 endlocal

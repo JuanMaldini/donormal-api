@@ -1,7 +1,14 @@
-# Imagen única para dashboard y worker.
-# Clave anti-dolor: opencv-python-headless (no necesita libGL) y deps horneadas
-# en build-time (cero descargas / pip-install en runtime, lo que rompía n8n/dokploy).
-# Contexto de build = raíz del proyecto (ver deploy/docker-compose.yml).
+# Worker de normales. Un proceso: sin puerto, sin volumen, sin estado.
+#
+# Claves anti-dolor:
+#   - opencv-python-headless: no necesita libGL.so.1, que era lo que rompia
+#     en n8n / docker / dokploy.
+#   - dependencias horneadas en build-time: cero pip install en runtime.
+#
+# Contexto de build = raiz del proyecto.
+# `tools/` NO se copia a proposito: son scripts de un solo uso que hablan con
+# la PocketBase vieja, y no hay motivo para darle al worker credenciales de
+# dos bases.
 FROM python:3.12-slim
 
 RUN apt-get update \
@@ -13,14 +20,10 @@ WORKDIR /app
 COPY deploy/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY scripts/ ./scripts/
-COPY frontend/ ./frontend/
+COPY src/ ./src/
 
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app/scripts \
-    LOG_DIR=/app/logs
+# PYTHONUNBUFFERED: sin esto los logs quedan en el buffer de Python y el panel
+# de Dokploy no muestra nada hasta que el proceso muere.
+ENV PYTHONUNBUFFERED=1
 
-RUN mkdir -p /app/logs
-EXPOSE 8753
-
-CMD ["uvicorn", "app:app", "--app-dir", "/app/frontend", "--host", "0.0.0.0", "--port", "8753"]
+CMD ["python", "/app/src/main.py"]

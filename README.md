@@ -1,76 +1,95 @@
-# dnormal
+# Clothfigurator — Normal Worker
 
-Generador de **normal maps** para las texturas de Clothfigurator, conectado a
-la **misma** instancia de PocketBase que `Clothfigurator_web` (mismas
-colecciones, mismo registro por usuario, mismo array `file[]`).
+Genera el **normal map** de cada textura que se sube al dashboard, y lo deja en
+el mismo record de PocketBase, en el campo `file_normal`.
 
-Replica el algoritmo de tu `Normal_creator` (MircoWerner/BumpToNormalMap):
-Sobel → `normalize(1/strength, dy, dx)` → PNG, con **strength=2**. La diferencia
-es que acá el algoritmo viene **horneado en el contenedor** y usa
-`opencv-python-headless`, así que **no descarga nada en runtime** ni necesita
-`libGL.so.1` — que era lo que rompía en n8n / docker / dokploy.
+Un proceso. Sin puerto, sin volumen, sin estado. Corre en la VPS dentro de
+Dokploy; el estado vive en PocketBase (`normal_status`), no en el contenedor,
+así que si se muere arranca otro y sigue donde estaba.
 
-## Cómo se usa
+## El ciclo
 
-1. `copy .env.example .env` y rellená las 4 variables (sin fallback: si falta
-   una, no arranca):
-   - `PB_URL`, `PB_TOKEN`, `PB_USERS`, `PB_DATA`.
-2. **Dashboard** (localhost): doble clic en `startWeb.bat` → abre
-   `http://localhost:8753`. Entrás con **tu mismo usuario** del web.
+```
+usuario sube una textura
+  └─ record en clothfigurator_textures, normal_status="pending"
+       └─ el worker lo ve por SSE (~2 s)
+            └─ baja el albedo, Sobel en RAM, sube file_normal
+                 └─ normal_status="done"
+```
 
-   Los `.bat` se encargan de todo: si **Docker** está corriendo, levantan el
-   contenedor; si **no**, caen automáticamente a **modo nativo Python** (crean
-   `.venv`, instalan dependencias y arrancan). No necesitás Docker para usar el
-   dashboard localmente — solo Python en el PATH.
-3. En el panel: a la izquierda **tus texturas**, a la derecha las **normales**
-   ya creadas, y abajo los **logs** en vivo. En cada textura sin normal hay un
-   botón **Generar normal** (procesamiento on-demand, una a la vez).
-4. `stopWeb.bat` para bajar el dashboard.
+La normal **no es un archivo suelto**: es un campo del record de su textura. Por
+eso no hay nada que filtrar en el frontend (nunca fue un item de lista), nada
+que emparejar por nombre, y nada que se pueda re-convertir: `normal_status`
+dice si ya está hecha.
 
-### Worker automático (fase 2, opcional)
+### SSE + polling, las dos cosas
 
-Cuando quieras "todo directo" en vez de elegir una por una:
+- **SSE** solo: PocketBase no reenvía lo que pasó mientras estabas
+  desconectado. Un deploy de 30 s y esas texturas no las procesa nadie.
+- **Polling** solo: el usuario espera hasta 5 min mirando "generando".
 
-- `start.bat` levanta el worker que escanea PocketBase y genera todas las
-  normales faltantes en bucle. `stop.bat` lo baja.
+Los dos productores solo **encolan**. Procesar pasa en un único hilo consumidor:
+nunca hay dos normales generándose a la vez.
 
 ## Estructura
 
 ```
-start.bat / stop.bat         worker automático (fase 2)
-startWeb.bat / stopWeb.bat   dashboard (localhost)
-.env.example                 solo 4 vars de PocketBase
-deploy/                      Dockerfile, docker-compose.yml, requirements.txt
-scripts/
-  normalmap.py   algoritmo Sobel (horneado)
-  config.py      carga .env, falla si falta algo
-  pocketbase.py  cliente PB (auth, listar, subir/borrar, emparejar)
-  worker.py      procesamiento automático (fase 2)
-  logs.py        logging a stdout + logs/dnormal.log
-frontend/
-  app.py             FastAPI: login, listar, generar, proxy de imágenes, logs
-  static/index.html  dashboard minimalista
-logs/                (gitignored)
+src/
+  main.py       gate -> recover -> barrido -> SSE + poll
+  pb.py         cliente PocketBase (login de servicio, claim, upload)
+  normalmap.py  algoritmo Sobel (horneado, sin descargas en runtime)
+  config.py     3 variables de entorno, sin fallbacks
+  logs.py       stdout
+deploy/
+  Dockerfile           lo que buildea Dokploy
+  docker-compose.yml   solo para probar en local
+  requirements.txt
+tools/          scripts de un solo uso. NO entran en la imagen
 ```
 
-## Notas técnicas
+## Configuración
 
-- **Vínculo textura↔normal**: por el flag `_normal` en el nombre (igual que tu
-  repo). El emparejado tolera el sufijo aleatorio que PocketBase añade a los
-  archivos.
-- **Las normales se guardan en el mismo registro** del usuario (`file+`), así el
-  web las ve al instante (ya tiene preparado `textureNormalURL`).
-- **Solo localhost**: el dashboard se publica en `127.0.0.1:8753`.
-- Valores fijos en `config.py` (no en `.env`): formato `png`, puerto `8753`,
-  strength `2`, worker apagado.
-
-## Deploy en VPS
-
-Desde la raíz del proyecto (el compose vive en `deploy/`):
+Tres variables. Ninguna es un token.
 
 ```
-docker compose -f deploy/docker-compose.yml up -d --build dashboard          # dashboard
-docker compose -f deploy/docker-compose.yml --profile auto up -d --build worker   # + worker
+PB_URL=https://pocketbase.vp3dserver.online
+PB_WORKER_EMAIL=worker@clothfigurator.local
+PB_WORKER_PASSWORD=...
 ```
 
-Ver `docs/AUTOSTART_VPS.md` para arranque automático con systemd.
+PocketBase **no tiene API keys permanentes**: los tokens de impersonate no son
+renovables y vencen en silencio. El worker usa una **cuenta de servicio** (un
+record de `clothfigurator_users` con `role="worker"`) y auth-with-password; el
+cliente reautentica solo cuando el token caduca.
+
+Los nombres de las colecciones **no** son variables: viven en `src/config.py`.
+Son fijos en toda instancia, así que como variable solo agregaban otra forma de
+configurar mal el worker.
+
+## Deploy (Dokploy)
+
+```
+New Application → Provider: GitHub
+  Repo:        Clothfigurator-NormalWorker
+  Branch:      main
+  Build Type:  Dockerfile
+  Path:        deploy/Dockerfile
+  Environment: PB_URL / PB_WORKER_EMAIL / PB_WORKER_PASSWORD
+  Domain:      ninguno
+```
+
+No se sube nada a mano. Cada `git push` a `main` es un redeploy. Los logs se ven
+en el panel de Dokploy.
+
+## Local
+
+`start.bat` — usa Docker si está corriendo, si no cae a un `.venv` de Python.
+`stop.bat` — solo para el modo Docker.
+
+## Requisitos en PocketBase
+
+`clothfigurator_textures` con `file_albedo`, `file_normal`, `normal_status`
+(`pending|processing|done|error`), `attempts`, `error_log`, `claimed_at`, y un
+índice en `normal_status`. Los file fields **sin `protected`** — es lo que
+permite que el visitante del link público y Unreal (que no arrastra sesión)
+puedan leer los archivos.

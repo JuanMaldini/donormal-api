@@ -1,32 +1,21 @@
-# dnormal — stack mínimo (los .bat lo invocan; contexto = raíz del proyecto)
-#   dashboard : siempre (startWeb.bat)
-#   worker    : fase 2, perfil "auto" (start.bat)
+# Solo para correr el worker en tu maquina antes de pushear.
+#
+# En la VPS esto NO se usa: Dokploy buildea deploy/Dockerfile directo (para un
+# contenedor unico, "Application + Dockerfile" alcanza) y las variables se
+# cargan en su panel, en Environment.
+#
+#   docker compose -f deploy/docker-compose.yml up --build
+#
+# Sin `ports`  : el worker no recibe trafico, solo sale.
+# Sin `volumes`: no guarda nada. Las normales se generan en RAM y van directo a
+#                PocketBase; los logs van a stdout.
 
 services:
-  dashboard:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile
-    image: dnormal:latest
-    container_name: dnormal-dashboard
-    env_file: ../.env
-    ports:
-      - "127.0.0.1:8753:8753"   # solo localhost
-    volumes:
-      - ../logs:/app/logs
-    restart: unless-stopped
-
   worker:
     build:
       context: ..
       dockerfile: deploy/Dockerfile
-    image: dnormal:latest
-    container_name: dnormal-worker
+    image: clothfigurator-normal-worker:latest
+    container_name: normal-worker
     env_file: ../.env
-    environment:
-      - WORKER_ENABLED=true
-    command: ["python", "/app/scripts/worker.py"]
-    volumes:
-      - ../logs:/app/logs
     restart: unless-stopped
-    profiles: ["auto"]

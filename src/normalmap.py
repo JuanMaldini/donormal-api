@@ -105,7 +105,12 @@ def _compute_normals(img: np.ndarray, strength: float) -> np.ndarray:
     if img.ndim == 2:
         img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
 
-    ddepth = cv2.CV_64F
+    # CV_32F, no CV_64F. En float64 una textura 4K son ~400 MB por gradiente,
+    # y hay dos, mas el stack y el normalize: pico de ~1.5-2 GB para UNA
+    # textura, que en un contenedor con limite de memoria es un OOM kill sin
+    # mensaje. En float32 el resultado visual es identico -- la salida se
+    # cuantiza a uint8 igual -- y la memoria se parte al medio.
+    ddepth = cv2.CV_32F
     grad_x = cv2.Sobel(img, ddepth, 1, 0, ksize=3, scale=1, delta=0,
                        borderType=cv2.BORDER_REPLICATE)
     grad_y = cv2.Sobel(img, ddepth, 0, 1, ksize=3, scale=1, delta=0,
