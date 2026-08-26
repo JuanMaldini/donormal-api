@@ -28,6 +28,9 @@ tmp/
 *.tmp
 tmp_*.png
 
+# --- Migracion legacy (un solo uso): salida generada, no va al depot ---
+export/
+
 # --- Repo git anidado ---
 .git/
 

@@ -20,3 +20,6 @@ tmp_*.png
 # OS
 .DS_Store
 Thumbs.db
+
+# Migracion (un solo uso)
+export/
